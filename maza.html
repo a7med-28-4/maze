@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maze Escape</title>
+  <!-- New: Favicon for the maze logo -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #1a202c;
+      color: #e2e8f0;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      overflow: hidden; /* Prevent body scrolling */
+    }
+    canvas {
+      background: linear-gradient(to bottom, #2d3748, #1a202c);
+      border-radius: 1rem;
+      box-shadow: 0 0 20px #000;
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+      display: block; /* Ensure canvas is a block element */
+      margin: 0 auto; /* Center the canvas */
+    }
+    .button {
+      background: #facc15;
+      color: #1a202c;
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px #000;
+      transition: transform 0.1s ease;
+      cursor: pointer;
+    }
+    .button:hover {
+      transform: scale(1.05);
+      background: #fde047;
+    }
+    .flash {
+      animation: flash 0.3s ease;
+    }
+    @keyframes flash {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(2); }
+      100% { filter: brightness(1); }
+    }
+    @keyframes slide {
+      0% { transform: translateX(-30px); opacity: 0; }
+      50% { transform: translateX(10px); opacity: 1; }
+      100% { transform: translateX(0); }
+    }
+    .animate-slide {
+      animation: slide 2s ease-in-out infinite alternate;
+    }
+    .animate-bounce {
+      animation: bounce 1s infinite;
+    }
+    .game-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+      z-index: 10;
+    }
+    .game-info {
+      display: flex;
+      gap: 1rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #e2e8f0;
+    }
+    .dropdown-menu {
+      position: absolute;
+      background: #facc15; /* Changed to match button color */
+      color: #1a202c;
+      border-radius: 0.75rem; /* Rounded corners */
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      padding: 0.5rem;
+      min-width: 150px;
+      text-align: center;
+      font-weight: bold;
+      top: calc(100% + 0.5rem); /* Position below toggle button */
+      right: 0;
+      z-index: 20;
+    }
+    .dropdown-menu button {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      transition: background-color 0.2s ease;
+    }
+    .dropdown-menu button:hover {
+      background-color: #fde047; /* Lighter yellow on hover */
+    }
+    /* Mobile control elements */
+    .mobile-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .mobile-button {
+      background: #4a5568;
+      color: #e2e8f0;
+      padding: 1rem 1.5rem;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      box-shadow: 0 2px 6px #000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+    }
+    .mobile-button:active {
+      background: #2d3748;
+    }
+    /* Adjust intro screen position */
+    #introScreen {
+      /* padding-top: 2vh; removed here */
+      /* justify-center changed to justify-start in HTML and pt-20 added */
+    }
+    .language-toggle {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #e2e8f0;
+      margin-left: 0.5rem;
+    }
+
+    /* New styles for custom difficulty list */
+    .difficulty-selector {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1.5rem; /* Same as mb-6 in original selection */
+    }
+    .difficulty-display-button {
+      background: #facc15;
+      color: #1a202c;
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px #000;
+      transition: transform 0.1s ease;
+      cursor: pointer;
+      min-width: 150px; /* Ensure it's wide enough */
+    }
+    .difficulty-options {
+      position: absolute;
+      background: #facc15;
+      color: #1a202c;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      padding: 0.5rem;
+      min-width: 150px;
+      text-align: center;
+      font-weight: bold;
+      top: calc(100% + 0.5rem);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+    }
+    .difficulty-options button {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      transition: background-color 0.2s ease;
+    }
+    .difficulty-options button:hover {
+      background-color: #fde047;
+    }
+
+    /* Styles for the new continue game message box */
+    #continueMessageBox {
+      background-color: #2d3748; /* Darker blue-gray */
+      border: 2px solid #facc15; /* Yellow border */
+    }
+    #continueMessageBox .button {
+      background-color: #facc15;
+      color: #1a202c;
+    }
+    #continueMessageBox .button:hover {
+      background-color: #fde047;
+    }
+
+    /* Styles for the banner ad container */
+    #bannerAdContainer {
+      width: 100%;
+      max-width: 728px; /* Standard banner ad width */
+      height: 90px; /* Standard banner ad height */
+      background-color: #1a202c; /* Dark background */
+      border: 1px solid #facc15; /* Yellow border */
+      margin-top: 2rem; /* Space from controls */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e2e8f0;
+      font-size: 1rem;
+      text-align: center;
+      border-radius: 0.5rem;
+      overflow: hidden; /* Ensure ad content stays within bounds */
+    }
+    @media (max-width: 768px) {
+      #bannerAdContainer {
+        max-width: 320px; /* Smaller banner for mobile */
+        height: 50px; /* Smaller height for mobile */
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="introScreen" class="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-gray-800 via-gray-900 to-black text-center pt-20">
+  <h1 class="text-5xl font-extrabold text-yellow-700 mb-4 animate-pulse">🌀 Maze Escape</h1>
+  <p class="mb-4 text-xl font-bold text-yellow-300 animate-slide">
+    👨‍💻 <span id="animatedName">Ahmed Hashem</span>
+  </p>
+
+  <div class="difficulty-selector">
+    <button id="difficultyDisplayButton" class="difficulty-display-button" data-key="difficulty_medium">
+      🔥 Medium
+    </button>
+    <div id="difficultyOptions" class="hidden difficulty-options">
+      <button class="difficulty-option-button" data-difficulty="easy" data-key="difficulty_easy">🌱 Easy</button>
+      <button class="difficulty-option-button" data-difficulty="medium" data-key="difficulty_medium">🔥 Medium</button>
+      <button class="difficulty-option-button" data-difficulty="hard" data-key="difficulty_hard">💀 Hard</button>
+    </div>
+  </div>
+  <button id="introStartButton" class="button animate-bounce bg-yellow-500 hover:bg-yellow-400 text-gray-900 text-xl px-6 py-3 rounded-full shadow-lg" data-key="start_game_button">
+    ▶️ Start Game
+  </button>
+</div>
+
+<div id="gameContainer" class="hidden flex flex-col items-center relative min-h-screen">
+  <div class="game-controls">
+    <div class="game-info">
+      <span id="timerDisplay" data-key="time_display">Time: 60</span>
+      <span id="keysDisplay" data-key="keys_display">Keys: 0</span>
+    </div>
+    <div class="flex gap-2">
+      <button id="muteButton" class="button">🔊</button>
+      <button id="languageToggle" class="language-toggle">🌐</button> <div class="relative">
+        <button id="menuToggleButton" class="button" data-key="menu_button">📋 Menu</button>
+        <div id="dropdownMenu" class="hidden dropdown-menu">
+          <button id="pauseResumeButton" data-key="pause_resume_button">⏸️ Pause</button>
+          <button id="dropdownRestart" data-key="restart_button">🔄 Restart</button>
+          <button id="dropdownMenuBack" data-key="home_button">🏠 Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" class="mt-20"></canvas>
+  <div class="mobile-controls mt-4">
+    <button id="mobileUp" class="mobile-button">⬆️</button>
+  </div>
+  <div class="mobile-controls">
+    <button id="mobileLeft" class="mobile-button">⬅️</button>
+    <button id="mobileDown" class="mobile-button">⬇️</button>
+    <button id="mobileRight" class="mobile-button">➡️</button>
+  </div>
+
+  <!-- New: Placeholder for Banner Ad -->
+  <div id="bannerAdContainer" class="mt-4">
+    <!-- هنا ستضع كود إعلان البانر الخاص بك من شبكة الإعلانات (مثل Google AdSense) -->
+    <!-- For example: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUBLISHER_ID" crossorigin="anonymous"></script> -->
+    <!-- <ins class="adsbygoogle"
+         style="display:inline-block;width:728px;height:90px"
+         data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
+         data-ad-slot="YOUR_AD_SLOT_ID"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script> -->
+    <p>مكان إعلان بانر (مثال: إعلان Google AdSense)</p>
+  </div>
+  <!-- End New: Placeholder for Banner Ad -->
+
+</div>
+
+<div id="messageBox" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-xl shadow-lg text-center z-50">
+  <h2 id="messageTitle" class="text-3xl mb-2 text-green-400"></h2>
+  <p id="messageText" class="text-lg text-white mb-4"></p>
+  <div class="flex justify-center gap-4">
+    <button id="messagePlayAgainButton" class="button" data-key="play_again_button">🔁 Play Again</button>
+    <button id="messageHomeButton" class="button" data-key="home_button">🏠 Home</button>
+  </div>
+</div>
+
+<!-- New: Continue Game Message Box -->
+<div id="continueMessageBox" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-xl shadow-lg text-center z-50">
+  <h2 id="continueMessageTitle" class="text-3xl mb-2 text-yellow-400" data-key="continue_title"></h2>
+  <p id="continueMessageText" class="text-lg text-white mb-4" data-key="continue_text"></p>
+  <div class="flex justify-center gap-4">
+    <button id="watchAdButton" class="button" data-key="watch_ad_button">📺 Watch Ad for +10s</button>
+    <button id="endGameButton" class="button" data-key="end_game_button">❌ End Game</button>
+  </div>
+</div>
+<!-- End New: Continue Game Message Box -->
+
+<audio id="backgroundMusic" src="music/صوت الخلفيه.mp3" loop preload="auto"></audio>
+<audio id="audioStart" src="music/صوت البداية.mp3" preload="auto" type="audio/mpeg"></audio>
+<audio id="audioWin" src="music/صوت الفوز.mp3" preload="auto" type="audio/mpeg"></audio>
+<audio id="audioLose" src="music/صوت الخساره.mp3" preload="auto" type="audio/mpeg"></audio>
+<audio id="audioKey" src="music/صوت المفتاح.mp3" preload="auto" type="audio/mpeg"></audio>
+<audio id="audioTrap" src="music/صوت الفخ.mp3" preload="auto" type="audio/mpeg"></audio>
+
+<script>
+// Ensure the script runs after the DOM is fully loaded
+window.addEventListener("load", () => {
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  let maze = [], player = {}, keys = [], traps = [], exit = {}, steps = 0, ended = false, timer, gameInterval;
+  let CELL_SIZE = 40, MAZE_WIDTH = 15, MAZE_HEIGHT = 15, KEY_COUNT = 3;
+  let maxTraps = 0; // Max number of traps allowed for the current difficulty
+  let trapDistance = 3; // Minimum distance for traps from the player
+  let trapGenerationThreshold = 5; // Number of player moves before attempting to add a new trap
+  let stepsSinceLastTrap = 0; // Player move counter
+  let lastLossReason = ''; // New global variable to store the reason for the last loss
+
+  // Player movement variables for smooth movement
+  let playerSpeed = 4; // Pixels per frame
+  let targetX = 0;
+  let targetY = 0;
+  let moving = false;
+
+  // Flag to indicate if the game was automatically paused by a blur event
+  let wasAutoPaused = false;
+  // Flag to indicate if audio was automatically muted by a blur event
+  let wasAudioMutedByBlur = false;
+
+  // Language management
+  const translations = {
+    en: {
+      difficulty_easy: "🌱 Easy",
+      difficulty_medium: "🔥 Medium",
+      difficulty_hard: "💀 Hard",
+      start_game_button: "▶️ Start Game",
+      time_display: "Time:",
+      keys_display: "Keys:",
+      menu_button: "📋 Menu",
+      pause_resume_button: "⏸️ Pause",
+      resume_button: "▶️ Resume",
+      restart_button: "🔄 Restart",
+      home_button: "🏠 Home",
+      win_title: "You Win!",
+      win_text: "You escaped the maze!",
+      game_over_title: "Game Over!",
+      trap_text: "You fell into a trap!",
+      time_out_text: "Time ran out!",
+      play_again_button: "🔁 Play Again",
+      return_to_main_menu: "🏠 Main Menu",
+      // New ad-related translations
+      continue_title: "Continue?",
+      continue_text: "Watch a short ad to get +10 seconds and continue!",
+      continue_text_trap: "Watch a short ad to continue!", // New text for trap loss
+      watch_ad_button: "📺 Watch Ad for +10s",
+      watch_ad_button_trap: "📺 Watch Ad to Continue", // New button text for trap loss
+      end_game_button: "❌ End Game"
+    },
+    ar: {
+      difficulty_easy: "🌱 سهل",
+      difficulty_medium: "🔥 متوسط",
+      difficulty_hard: "💀 صعب",
+      start_game_button: "▶️ ابدأ اللعبة",
+      time_display: "الوقت:",
+      keys_display: "المفاتيح:",
+      menu_button: "📋 القائمة",
+      pause_resume_button: "⏸️ إيقاف مؤقت",
+      resume_button: "▶️ استئناف",
+      restart_button: "🔄 إعادة",
+      home_button: "🏠 الرئيسية",
+      win_title: "لقد فزت!",
+      win_text: "لقد هربت من المتاهة!",
+      game_over_title: "انتهت اللعبة!",
+      trap_text: "لقد وقعت في فخ!",
+      time_out_text: "نفد الوقت!",
+      play_again_button: "🔁 العب مرة أخرى",
+      return_to_main_menu: "🏠 القائمة الرئيسية",
+      // New ad-related translations
+      continue_title: "هل تريد الاستمرار؟",
+      continue_text: "شاهد إعلاناً قصيراً لتحصل على +10 ثوانٍ وتكمل اللعب!",
+      continue_text_trap: "شاهد إعلاناً قصيراً لتكمل اللعب!", // New text for trap loss
+      watch_ad_button: "📺 شاهد إعلان لـ +10 ثوانٍ",
+      watch_ad_button_trap: "📺 شاهد إعلان للاستمرار", // New button text for trap loss
+      end_game_button: "❌ إنهاء اللعبة"
+    }
+  };
+
+  let currentLanguage = 'en'; // Default language
+  let selectedDifficulty = 'medium'; // Default selected difficulty
+
+  // Function to set the game language
+  function setLanguage(lang) {
+    currentLanguage = lang;
+    // Update elements with data-key attribute
+    document.querySelectorAll('[data-key]').forEach(element => {
+      const key = element.getAttribute('data-key');
+      if (key === 'time_display' || key === 'keys_display') {
+        // These are updated dynamically with numbers, so only update the prefix
+        const currentValue = element.textContent.split(': ')[1] || (key === 'time_display' ? timer : player.keys);
+        element.textContent = `${translations[currentLanguage][key]} ${currentValue}`;
+      } else {
+        element.textContent = translations[currentLanguage][key];
+      }
+    });
+
+    // Update specific elements that may not have data-key or need dynamic content
+    document.getElementById("pauseResumeButton").textContent = isPaused ? translations[currentLanguage].resume_button : translations[currentLanguage].pause_resume_button;
+    
+    // Update the difficulty displayed on the button
+    document.getElementById("difficultyDisplayButton").textContent = translations[currentLanguage][`difficulty_${selectedDifficulty}`];
+    
+    // Update the text of difficulty option buttons
+    document.querySelectorAll('.difficulty-option-button').forEach(button => {
+      const difficulty = button.getAttribute('data-difficulty');
+      button.textContent = translations[currentLanguage][`difficulty_${difficulty}`];
+    });
+
+    // Update message box button text
+    document.getElementById("messagePlayAgainButton").textContent = translations[currentLanguage].play_again_button;
+    document.getElementById("messageHomeButton").textContent = translations[currentLanguage].return_to_main_menu;
+
+    // Update continue message box button text based on lastLossReason
+    document.getElementById("continueMessageTitle").textContent = translations[currentLanguage].continue_title;
+    if (lastLossReason === 'time_out') {
+        document.getElementById("continueMessageText").textContent = translations[currentLanguage].time_out_text + " " + translations[currentLanguage].continue_text;
+        document.getElementById("watchAdButton").textContent = translations[currentLanguage].watch_ad_button;
+    } else if (lastLossReason === 'trap') {
+        document.getElementById("continueMessageText").textContent = translations[currentLanguage].trap_text + " " + translations[currentLanguage].continue_text_trap;
+        document.getElementById("watchAdButton").textContent = translations[currentLanguage].watch_ad_button_trap;
+    } else { // Default or initial state
+        document.getElementById("continueMessageText").textContent = translations[currentLanguage].continue_text;
+        document.getElementById("watchAdButton").textContent = translations[currentLanguage].watch_ad_button;
+    }
+    document.getElementById("endGameButton").textContent = translations[currentLanguage].end_game_button;
+  }
+
+  // Function to generate the maze with more branches
+  function generateMaze() {
+    maze = Array.from({ length: MAZE_HEIGHT }, () => Array(MAZE_WIDTH).fill(1));
+
+    function carve(x, y) {
+      const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]].sort(() => Math.random() - 0.5);
+      maze[y][x] = 0;
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx, ny = y + dy;
+        if (ny >= 0 && ny < MAZE_HEIGHT && nx >= 0 && nx < MAZE_WIDTH && maze[ny][nx] === 1) {
+          maze[y + dy / 2][x + dx / 2] = 0;
+          carve(nx, ny);
+        }
+      }
+    }
+    carve(0, 0);
+
+    // Add more random extra paths to increase branching based on difficulty
+    let additionalPathsFactor = 0.5; // Default for medium
+    const diff = selectedDifficulty; // Use selectedDifficulty
+    if (diff === "easy") {
+      additionalPathsFactor = 0.1; // Fewer branches for easy
+    } else if (diff === "hard") {
+      additionalPathsFactor = 0.9; // More branches for hard
+    }
+
+    for (let i = 0; i < MAZE_WIDTH * MAZE_HEIGHT * additionalPathsFactor; i++) {
+      const x = Math.floor(Math.random() * MAZE_WIDTH);
+      const y = Math.floor(Math.random() * MAZE_HEIGHT);
+      if (maze[y][x] === 1) {
+        const neighbors = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+        for (const [dx, dy] of neighbors) {
+          const nx = x + dx, ny = y + dy;
+          if (ny >= 0 && ny < MAZE_HEIGHT && nx >= 0 && nx < MAZE_WIDTH && maze[ny][nx] === 0) {
+            maze[y][x] = 0;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Function to generate keys (traps are now dynamic)
+  function generateObjects() {
+    const path = [];
+    const visited = Array.from({ length: MAZE_HEIGHT }, () => Array(MAZE_WIDTH).fill(false));
+    function dfs(x, y) {
+      if (x < 0 || y < 0 || x >= MAZE_WIDTH || y >= MAZE_HEIGHT || visited[y][x] || maze[y][x]) return;
+      visited[y][x] = true;
+      path.push({ x, y });
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => dfs(x + dx, y + dy));
+    }
+    dfs(0, 0);
+
+    keys = [];
+    while (keys.length < KEY_COUNT) {
+      const { x, y } = path[Math.floor(Math.random() * path.length)];
+      // Ensure keys are not at player start or exit
+      if (!keys.some(k => k.x === x && k.y === y) && (x !== 0 || y !== 0) && (x !== exit.x || y !== exit.y)) {
+        keys.push({ x, y });
+      }
+    }
+    // Traps are no longer generated here, they will be added dynamically
+    traps = [];
+  }
+
+  // Function to add a new dynamic trap during gameplay
+  function addDynamicTrap() {
+    if (traps.length >= maxTraps) return; // Don't add more traps than allowed
+
+    const possibleTrapLocations = [];
+    for (let y = 0; y < MAZE_HEIGHT; y++) {
+      for (let x = 0; x < MAZE_WIDTH; x++) {
+        // Check if it's a path, not a player, not a key, and not an existing trap
+        if (maze[y][x] === 0 &&
+            !(x === Math.round(player.x / CELL_SIZE - 0.5) && y === Math.round(player.y / CELL_SIZE - 0.5)) &&
+            !keys.some(k => k.x === x && k.y === y) &&
+            !traps.some(t => t.x === x && t.y === y)) {
+
+          // Check distance from current player position
+          const distFromPlayer = Math.abs(x - Math.round(player.x / CELL_SIZE - 0.5)) + Math.abs(y - Math.round(player.y / CELL_SIZE - 0.5));
+          if (distFromPlayer >= trapDistance) {
+
+            // Check distance from exit to ensure a clear path
+            const distFromExit = Math.abs(x - exit.x) + Math.abs(y - exit.y);
+            // Ensure trap is not too close to the exit (e.g., within 2 Manhattan distance cells)
+            if (distFromExit > 2) { // Prevents traps directly in front of the exit
+              possibleTrapLocations.push({ x, y });
+            }
+          }
+        }
+      }
+    }
+
+    if (possibleTrapLocations.length > 0) {
+      const newTrap = possibleTrapLocations[Math.floor(Math.random() * possibleTrapLocations.length)];
+      traps.push(newTrap);
+      document.getElementById("audioTrap").play().catch(e => console.error("Error playing audioTrap:", e)); // Play sound when a trap appears
+    }
+  }
+
+
+  // Function to draw the maze and game elements
+  function drawMaze() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < MAZE_HEIGHT; y++) {
+      for (let x = 0; x < MAZE_WIDTH; x++) {
+        if (maze[y][x] === 1) {
+          ctx.fillStyle = "#0f172a"; // Wall color
+          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          ctx.strokeStyle = "#334155"; // Wall border color
+          ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+      }
+    }
+
+    // Draw keys
+    keys.forEach(k => {
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(k.x * CELL_SIZE + CELL_SIZE / 2, k.y * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 5, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+
+    // Draw exit
+    ctx.fillStyle = "#38bdf8"; // Exit color
+    ctx.fillRect(exit.x * CELL_SIZE + 8, exit.y * CELL_SIZE + 8, CELL_SIZE - 16, CELL_SIZE - 16);
+
+    // Draw traps
+    ctx.strokeStyle = "#dc2626"; // Trap color
+    ctx.lineWidth = 2; // Thicker lines for traps
+    traps.forEach(t => {
+      ctx.beginPath();
+      ctx.moveTo(t.x * CELL_SIZE + 10, t.y * CELL_SIZE + 10);
+      ctx.lineTo(t.x * CELL_SIZE + CELL_SIZE - 10, t.y * CELL_SIZE + CELL_SIZE - 10);
+      ctx.moveTo(t.x * CELL_SIZE + CELL_SIZE - 10, t.y * CELL_SIZE + 10);
+      ctx.lineTo(t.x * CELL_SIZE + 10, t.y * CELL_SIZE + CELL_SIZE - 10);
+      ctx.stroke();
+    });
+    ctx.lineWidth = 1; // Reset line width
+
+    // Draw player
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, CELL_SIZE / 3, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // Function to smoothly update player position
+  function updatePlayerPosition() {
+    if (!moving) return;
+
+    const dx = targetX - player.x;
+    const dy = targetY - player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < playerSpeed) {
+      player.x = targetX;
+      player.y = targetY;
+      moving = false;
+      checkCollisions(); // Check for keys/traps/exit after reaching the target
+
+      // Increment steps and potentially add a new trap
+      stepsSinceLastTrap++;
+      if (stepsSinceLastTrap >= trapGenerationThreshold) {
+        addDynamicTrap();
+        stepsSinceLastTrap = 0; // Reset counter
+      }
+
+    } else {
+      player.x += (dx / distance) * playerSpeed;
+      player.y += (dy / distance) * playerSpeed;
+    }
+    drawMaze();
+    requestAnimationFrame(updatePlayerPosition);
+  }
+
+  // Function to start player movement to a new cell
+  function movePlayerToCell(newCellX, newCellY) {
+    if (ended || moving) return; // Prevent movement if game ended or already moving
+
+    const currentCellX = Math.floor(player.x / CELL_SIZE);
+    const currentCellY = Math.floor(player.y / CELL_SIZE);
+
+    // Check if the new cell is valid and accessible
+    if (newCellX >= 0 && newCellX < MAZE_WIDTH && newCellY >= 0 && newCellY < MAZE_HEIGHT && maze[newCellY][newCellX] === 0) {
+      // Check if there's a wall between current and target cell
+      if (Math.abs(newCellX - currentCellX) + Math.abs(newCellY - currentCellY) === 1) { // Only allow movement to adjacent cells
+        targetX = newCellX * CELL_SIZE + CELL_SIZE / 2;
+        targetY = newCellY * CELL_SIZE + CELL_SIZE / 2;
+        moving = true;
+        requestAnimationFrame(updatePlayerPosition);
+      }
+    }
+  }
+
+  // Function to handle player movement based on direction
+  function handlePlayerMovement(dx, dy) {
+    const currentCellX = Math.round(player.x / CELL_SIZE - 0.5); // Get current cell from smooth player position
+    const currentCellY = Math.round(player.y / CELL_SIZE - 0.5);
+
+    const newCellX = currentCellX + dx;
+    const newCellY = currentCellY + dy;
+
+    movePlayerToCell(newCellX, newCellY);
+  }
+
+  // Function to check for collisions with keys, traps, and exit
+  function checkCollisions() {
+    const playerCellX = Math.round(player.x / CELL_SIZE - 0.5);
+    const playerCellY = Math.round(player.y / CELL_SIZE - 0.5);
+
+    // Check for collecting keys
+    keys = keys.filter(k => {
+      if (k.x === playerCellX && k.y === playerCellY) {
+        document.getElementById("audioKey").play().catch(e => console.error("Error playing audioKey:", e));
+        player.keys++;
+        document.getElementById("keysDisplay").textContent = `${translations[currentLanguage].keys_display} ${player.keys}`;
+        flashEffect();
+        return false; // Remove key
+      }
+      return true;
+    });
+
+    // Check for trap collision
+    if (traps.some(t => t.x === playerCellX && t.y === playerCellY)) {
+      endGame(false, 'trap'); // Pass loss reason
+    }
+    // Check for exit
+    else if (playerCellX === exit.x && playerCellY === exit.y && player.keys >= KEY_COUNT) {
+      endGame(true, 'win'); // Pass win reason
+    }
+  }
+
+  // Flash effect on canvas
+  function flashEffect() {
+    canvas.classList.add("flash");
+    setTimeout(() => canvas.classList.remove("flash"), 300);
+  }
+
+  // Function to end the game - now accepts a reason parameter
+  function endGame(win, reason = '') {
+    ended = true;
+    clearInterval(gameInterval);
+    stopContinuousMove(); // Stop player movement when game ends
+    backgroundMusic.pause(); // Pause background music
+    lastLossReason = reason; // Store the reason for loss
+
+    if (win) {
+      document.getElementById("messageBox").classList.remove("hidden");
+      document.getElementById("messageTitle").textContent = translations[currentLanguage].win_title;
+      document.getElementById("messageText").textContent = translations[currentLanguage].win_text;
+      document.getElementById("audioWin").play().catch(e => console.error("Error playing end game audio:", e));
+    } else {
+      // If loss, show continue prompt
+      document.getElementById("audioLose").play().catch(e => console.error("Error playing audioLose:", e));
+      showContinuePrompt(reason);
+    }
+    // Update button text in message box (only if standard messageBox is shown)
+    document.getElementById("messagePlayAgainButton").textContent = translations[currentLanguage].play_again_button;
+    document.getElementById("messageHomeButton").textContent = translations[currentLanguage].return_to_main_menu;
+  }
+
+  // New: Function to show the "Continue Game" prompt
+  function showContinuePrompt(reason) {
+    document.getElementById("continueMessageBox").classList.remove("hidden");
+    // Set title and text based on loss reason
+    document.getElementById("continueMessageTitle").textContent = translations[currentLanguage].continue_title;
+    if (reason === 'time_out') {
+        document.getElementById("continueMessageText").textContent = translations[currentLanguage].time_out_text + " " + translations[currentLanguage].continue_text;
+        document.getElementById("watchAdButton").textContent = translations[currentLanguage].watch_ad_button;
+    } else if (reason === 'trap') {
+        document.getElementById("continueMessageText").textContent = translations[currentLanguage].trap_text + " " + translations[currentLanguage].continue_text_trap;
+        document.getElementById("watchAdButton").textContent = translations[currentLanguage].watch_ad_button_trap;
+    }
+  }
+
+  // New: Function to simulate watching an ad and continue
+  function watchAdAndContinue() {
+    document.getElementById("continueMessageBox").classList.add("hidden");
+    // Simulate ad viewing time
+    document.getElementById("messageBox").classList.remove("hidden");
+    document.getElementById("messageTitle").textContent = "Loading Ad..."; // Placeholder
+    document.getElementById("messageText").textContent = "Please wait while the ad plays.";
+    document.getElementById("messagePlayAgainButton").classList.add("hidden"); // Hide buttons during ad
+    document.getElementById("messageHomeButton").classList.add("hidden");
+
+    // In a real scenario, you would integrate with an ad network SDK here
+    // and wait for the ad to complete.
+    setTimeout(() => {
+      // Ad finished, grant reward and resume game
+      if (lastLossReason === 'time_out') {
+          timer += 10; // Add 10 seconds only if time ran out
+      }
+      ended = false; // Allow game to continue
+      isPaused = false; // Ensure game is not paused
+      
+      document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`;
+      
+      gameInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`;
+        if (timer <= 0) endGame(false, 'time_out');
+      }, 1000);
+
+      document.getElementById("messageBox").classList.add("hidden"); // Hide ad loading message
+      document.getElementById("messagePlayAgainButton").classList.remove("hidden"); // Show buttons again
+      document.getElementById("messageHomeButton").classList.remove("hidden");
+
+      // Resume background music only if it wasn't manually muted
+      if (!backgroundMusic.muted) {
+          backgroundMusic.play().catch(e => console.error("Error playing background music:", e));
+      }
+      drawMaze(); // Redraw maze to ensure player is visible
+    }, 3000); // Simulate a 3-second ad
+  }
+
+  // Function to reset all game variables to their initial state
+  function resetGameVariables() {
+    maze = [];
+    player = {};
+    keys = [];
+    traps = [];
+    exit = {};
+    steps = 0;
+    ended = false;
+    timer = 0;
+    clearInterval(gameInterval); // Ensure any previous timers are cleared
+    gameInterval = null;
+    playerSpeed = 4;
+    targetX = 0;
+    targetY = 0;
+    moving = false;
+    wasAutoPaused = false;
+    wasAudioMutedByBlur = false;
+    isPaused = false;
+    pausedTimer = 0;
+    lastLossReason = ''; // Reset loss reason
+    stopContinuousMove(); // Ensure any continuous movement is stopped
+    document.getElementById("messageBox").classList.add("hidden"); // Hide any active message boxes
+    document.getElementById("continueMessageBox").classList.add("hidden"); // Hide continue message box
+  }
+
+  // Function to start the game
+  function startGame() {
+    resetGameVariables(); // Reset all variables before starting a new game
+    ended = false;
+    const diff = selectedDifficulty; // Use selectedDifficulty
+
+    // Adjust maze size and number of traps based on difficulty
+    if (diff === "easy") {
+      CELL_SIZE = 50;
+      MAZE_WIDTH = 9; // Smaller maze for easy
+      MAZE_HEIGHT = 9;
+      KEY_COUNT = 1; // Fewer keys
+      maxTraps = 1; // Very few traps
+      trapDistance = 6; // Traps very far away
+      trapGenerationThreshold = 15; // Traps appear very infrequently
+      timer = 120; // Much more time
+    } else if (diff === "hard") {
+      CELL_SIZE = 30;
+      MAZE_WIDTH = 25; // Much larger maze for hard
+      MAZE_HEIGHT = 25;
+      KEY_COUNT = 7; // More keys
+      maxTraps = 25; // Many more traps
+      trapDistance = 1; // Traps can be very close
+      trapGenerationThreshold = 2; // Traps appear very frequently
+      timer = 30; // Much less time
+    } else { // Medium (default)
+      CELL_SIZE = 40;
+      MAZE_WIDTH = 15;
+      MAZE_HEIGHT = 15;
+      KEY_COUNT = 3;
+      maxTraps = 7; // Medium traps
+      trapDistance = 3; // Medium distance
+      trapGenerationThreshold = 7; // Medium frequency
+      timer = 60;
+    }
+
+    canvas.width = MAZE_WIDTH * CELL_SIZE;
+    canvas.height = MAZE_HEIGHT * CELL_SIZE;
+
+    player = { x: CELL_SIZE / 2, y: CELL_SIZE / 2, keys: 0 }; // Player starts in the center of the first cell
+    targetX = player.x;
+    targetY = player.y;
+    moving = false;
+    stepsSinceLastTrap = 0; // Reset steps for trap generation
+
+    exit = { x: MAZE_WIDTH - 1, y: MAZE_HEIGHT - 1 };
+    generateMaze();
+    generateObjects(); // Generate keys and initial maze, traps are dynamic
+    
+    document.getElementById("keysDisplay").textContent = `${translations[currentLanguage].keys_display} 0`;
+    document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`; // Initialize timer display
+    clearInterval(gameInterval);
+    gameInterval = setInterval(() => {
+      timer--;
+      document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`;
+      if (timer <= 0) endGame(false, 'time_out'); // Pass loss reason
+    }, 1000);
+    drawMaze();
+  }
+
+  // Get background music element
+  const backgroundMusic = document.getElementById("backgroundMusic");
+
+  // Custom difficulty selection elements
+  const difficultyDisplayButton = document.getElementById("difficultyDisplayButton");
+  const difficultyOptions = document.getElementById("difficultyOptions");
+  const difficultyOptionButtons = document.querySelectorAll(".difficulty-option-button");
+
+  // Event listener for difficulty display button
+  difficultyDisplayButton.onclick = () => {
+    difficultyOptions.classList.toggle("hidden");
+  };
+
+  // Event listeners for individual difficulty option buttons
+  difficultyOptionButtons.forEach(button => {
+    button.onclick = () => {
+      selectedDifficulty = button.getAttribute("data-difficulty");
+      difficultyDisplayButton.textContent = button.textContent; // Update display button text
+      difficultyOptions.classList.add("hidden"); // Hide options after selection
+      setLanguage(currentLanguage); // Update text in case of language change
+    };
+  });
+
+
+  // Event listeners
+  document.getElementById("introStartButton").onclick = () => {
+    document.getElementById("introScreen").classList.add("hidden");
+    document.getElementById("gameContainer").classList.remove("hidden");
+    // Attempt to play start sound, handle potential errors
+    document.getElementById("audioStart").play().catch(e => console.error("Error playing audioStart:", e));
+    backgroundMusic.pause(); // Pause background music when game starts
+    startGame();
+  };
+
+  // "Play Again" button in message box
+  document.getElementById("messagePlayAgainButton").onclick = () => {
+    document.getElementById("messageBox").classList.add("hidden");
+    startGame(); // Start game directly
+  };
+
+  // "Return to Main Menu" button in message box
+  document.getElementById("messageHomeButton").onclick = () => {
+    document.getElementById("messageBox").classList.add("hidden");
+    document.getElementById("gameContainer").classList.add("hidden");
+    document.getElementById("introScreen").classList.remove("hidden");
+    resetGameVariables(); // Reset all variables
+    backgroundMusic.play().catch(e => console.error("Error playing background music:", e)); // Resume background music
+  };
+
+  // New: "Watch Ad" button in continue message box
+  document.getElementById("watchAdButton").onclick = () => {
+    watchAdAndContinue();
+  };
+
+  // New: "End Game" button in continue message box
+  document.getElementById("endGameButton").onclick = () => {
+    document.getElementById("continueMessageBox").classList.add("hidden");
+    document.getElementById("messageBox").classList.remove("hidden"); // Show standard game over message
+    document.getElementById("messageTitle").textContent = translations[currentLanguage].game_over_title;
+    // Set text based on the last known reason for loss, or a generic one
+    document.getElementById("messageText").textContent = translations[currentLanguage].return_to_main_menu; // Or a more specific "You chose to end the game"
+    document.getElementById("messagePlayAgainButton").classList.remove("hidden"); // Ensure buttons are visible
+    document.getElementById("messageHomeButton").classList.remove("hidden");
+    // The game is already ended=true from the initial endGame call, so no need to set it again.
+    // Just ensure the correct message is displayed and options are available.
+  };
+
+
+  document.getElementById("muteButton").onclick = () => {
+    const isMuted = backgroundMusic.muted; // Check background music mute state
+    document.querySelectorAll("audio").forEach(a => a.muted = !isMuted);
+    document.getElementById("muteButton").textContent = isMuted ? "🔊" : "🔇";
+    wasAudioMutedByBlur = false; // If user manually toggles, unset auto-mute flag
+  };
+
+  // Language toggle button
+  document.getElementById("languageToggle").onclick = () => {
+    const newLang = currentLanguage === 'en' ? 'ar' : 'en';
+    setLanguage(newLang);
+  };
+
+  // Enable audio on first touch/click for mobile compatibility
+  document.addEventListener('touchstart', initAudio, { once: true });
+  document.addEventListener('click', initAudio, { once: true });
+
+  function initAudio() {
+    document.querySelectorAll('audio').forEach(audio => {
+      audio.load(); // Preload audio
+      // Attempt to play a silent or short sound to unlock audio context
+      // This is a common workaround for mobile browser autoplay policies
+      // Play background music here only, other sounds are triggered by game events
+      if (audio.id === "backgroundMusic") {
+        audio.play().catch(e => console.log("Background music autoplay prevented, user interaction required:", e));
+      }
+    });
+  }
+
+  // Touch/mouse controls for continuous movement
+  let currentMoveDirection = null;
+  let moveIntervalId = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  const swipeThreshold = 15; // Minimum pixels to register a swipe/drag
+
+  function startContinuousMove(dx, dy) {
+    if (ended || isPaused) return; // Don't allow movement if game ended or paused
+    if (currentMoveDirection === `${dx},${dy}`) return; // Already moving in this direction
+    stopContinuousMove(); // Stop any existing continuous movement
+
+    currentMoveDirection = `${dx},${dy}`;
+    moveIntervalId = setInterval(() => {
+      handlePlayerMovement(dx, dy);
+    }, 150); // Adjust interval for desired speed
+  }
+
+  function stopContinuousMove() {
+    clearInterval(moveIntervalId);
+    moveIntervalId = null;
+    currentMoveDirection = null;
+  }
+
+  // Keyboard controls
+  window.addEventListener("keydown", (e) => {
+    if (ended || isPaused) return; // Don't allow movement if game ended or paused
+    if (e.repeat) return; // Prevent continuous movement when key is held down for step-by-step movement
+    switch (e.key) {
+      case "ArrowLeft":
+        e.preventDefault(); // Prevent default browser behavior (e.g., scrolling)
+        startContinuousMove(-1, 0);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        startContinuousMove(1, 0);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        startContinuousMove(0, -1);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        startContinuousMove(0, 1);
+        break;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+      stopContinuousMove();
+    }
+  });
+
+  // Mobile button controls
+  document.getElementById("mobileUp").addEventListener("touchstart", (e) => { e.preventDefault(); startContinuousMove(0, -1); }, { passive: false });
+  document.getElementById("mobileUp").addEventListener("touchend", stopContinuousMove);
+  document.getElementById("mobileUp").addEventListener("mousedown", () => startContinuousMove(0, -1));
+  document.getElementById("mobileUp").addEventListener("mouseup", stopContinuousMove);
+  document.getElementById("mobileUp").addEventListener("mouseleave", stopContinuousMove); // For mouse leaving the button
+
+  document.getElementById("mobileDown").addEventListener("touchstart", (e) => { e.preventDefault(); startContinuousMove(0, 1); }, { passive: false });
+  document.getElementById("mobileDown").addEventListener("touchend", stopContinuousMove);
+  document.getElementById("mobileDown").addEventListener("mousedown", () => startContinuousMove(0, 1));
+  document.getElementById("mobileDown").addEventListener("mouseup", stopContinuousMove);
+  document.getElementById("mobileDown").addEventListener("mouseleave", stopContinuousMove);
+
+  document.getElementById("mobileLeft").addEventListener("touchstart", (e) => { e.preventDefault(); startContinuousMove(-1, 0); }, { passive: false });
+  document.getElementById("mobileLeft").addEventListener("touchend", stopContinuousMove);
+  document.getElementById("mobileLeft").addEventListener("mousedown", () => startContinuousMove(-1, 0));
+  document.getElementById("mobileLeft").addEventListener("mouseup", stopContinuousMove);
+  document.getElementById("mobileLeft").addEventListener("mouseleave", stopContinuousMove);
+
+  document.getElementById("mobileRight").addEventListener("touchstart", (e) => { e.preventDefault(); startContinuousMove(1, 0); }, { passive: false });
+  document.getElementById("mobileRight").addEventListener("touchend", stopContinuousMove);
+  document.getElementById("mobileRight").addEventListener("mousedown", () => startContinuousMove(1, 0));
+  document.getElementById("mobileRight").addEventListener("mouseup", stopContinuousMove);
+  document.getElementById("mobileRight").addEventListener("mouseleave", stopContinuousMove);
+
+  // Touch/mouse controls on canvas for continuous movement
+  canvas.addEventListener("touchstart", (e) => {
+    if (ended || isPaused) return;
+    e.preventDefault(); // Prevent scrolling
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: false }); // Use passive: false to allow preventDefault
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (ended || isPaused) return;
+    e.preventDefault(); // Prevent scrolling
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const dx = currentX - touchStartX;
+    const dy = currentY - touchStartY;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
+      // Horizontal swipe
+      startContinuousMove(dx > 0 ? 1 : -1, 0);
+    } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > swipeThreshold) {
+      // Vertical swipe
+      startContinuousMove(0, dy > 0 ? 1 : -1);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", () => {
+    stopContinuousMove();
+  });
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (ended || isPaused) return;
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (ended || isPaused || !e.buttons) return; // Only if mouse button is pressed (dragging)
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+    const dx = currentX - touchStartX;
+    const dy = currentY - touchStartY;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
+      startContinuousMove(dx > 0 ? 1 : -1, 0);
+    } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > swipeThreshold) {
+      startContinuousMove(0, dy > 0 ? 1 : -1);
+    }
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    stopContinuousMove();
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    stopContinuousMove(); // Stop movement if mouse leaves canvas while dragging
+  });
+
+  // Dropdown menu function
+  const menuToggleButton = document.getElementById("menuToggleButton");
+  const dropdownMenu = document.getElementById("dropdownMenu");
+  let isPaused = false;
+  let pausedTimer = 0; // To store remaining time when paused
+
+  menuToggleButton.onclick = () => {
+    dropdownMenu.classList.toggle("hidden");
+  };
+
+  // Pause / Resume
+  document.getElementById("pauseResumeButton").onclick = () => {
+    isPaused = !isPaused;
+    document.getElementById("pauseResumeButton").textContent = isPaused ? translations[currentLanguage].resume_button : translations[currentLanguage].pause_resume_button;
+    if (isPaused) {
+      clearInterval(gameInterval);
+      pausedTimer = timer; // Save current timer
+      stopContinuousMove(); // Stop player movement when paused
+      backgroundMusic.pause(); // Pause background music when game is paused
+    } else {
+      timer = pausedTimer; // Restore timer
+      gameInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`;
+        if (timer <= 0) endGame(false, 'time_out');
+      }, 1000);
+      // Removed: backgroundMusic.play().catch(e => console.error("Error playing background music:", e)); // Resume background music
+    }
+    dropdownMenu.classList.add("hidden");
+  };
+
+  // Restart game from menu
+  document.getElementById("dropdownRestart").onclick = () => {
+    dropdownMenu.classList.add("hidden");
+    startGame();
+  };
+
+  // Return to intro screen from menu
+  document.getElementById("dropdownMenuBack").onclick = () => {
+    dropdownMenu.classList.add("hidden");
+    document.getElementById("gameContainer").classList.add("hidden");
+    document.getElementById("introScreen").classList.remove("hidden");
+    resetGameVariables(); // Reset all variables
+    backgroundMusic.play().catch(e => console.error("Error playing background music:", e)); // Resume background music
+  };
+
+  // Event listener when browser tab loses focus (auto-pause)
+  window.addEventListener('blur', () => {
+    // Check if game is currently active and not already paused by user
+    if (!document.getElementById("gameContainer").classList.contains("hidden") && !isPaused && !ended) {
+      isPaused = true;
+      wasAutoPaused = true; // Mark as auto-paused
+      document.getElementById("pauseResumeButton").textContent = translations[currentLanguage].resume_button;
+      clearInterval(gameInterval);
+      pausedTimer = timer; // Save current timer
+      stopContinuousMove(); // Stop player movement
+      dropdownMenu.classList.add("hidden"); // Hide menu if open
+      
+      // Mute all sounds
+      document.querySelectorAll("audio").forEach(a => a.muted = true);
+      wasAudioMutedByBlur = true; // Mark that audio was muted by blur
+      document.getElementById("muteButton").textContent = "🔇"; // Update mute icon
+    }
+  });
+
+  // Event listener when browser tab regains focus (auto-resume)
+  window.addEventListener('focus', () => {
+    // Resume only if it was auto-paused and game container is visible and not ended
+    if (wasAutoPaused && !document.getElementById("gameContainer").classList.contains("hidden") && !ended) {
+      isPaused = false;
+      wasAutoPaused = false; // Reset flag
+      document.getElementById("pauseResumeButton").textContent = translations[currentLanguage].pause_resume_button;
+      timer = pausedTimer; // Restore timer
+      gameInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timerDisplay").textContent = `${translations[currentLanguage].time_display} ${timer}`;
+        if (timer <= 0) endGame(false, 'time_out');
+      }, 1000);
+      
+      // Resume all sounds if they were muted by blur and not manually muted by user
+      if (!backgroundMusic.muted) {
+          backgroundMusic.play().catch(e => console.error("Error playing background music:", e));
+      }
+    }
+  });
+
+  // Initialize language on load
+  setLanguage(currentLanguage);
+
+  // Set initial difficulty display text
+  difficultyDisplayButton.textContent = translations[currentLanguage][`difficulty_${selectedDifficulty}`];
+
+  // Play background music on initial load (will handle autoplay policy)
+  backgroundMusic.play().catch(e => console.log("Background music autoplay prevented on load, user interaction required:", e));
+});
+</script>
+</body>
+</html>
